@@ -4,6 +4,8 @@
 
 一次用户发言 = 一个 git commit。别人可以基于你的对话轨迹继续项目，也可以用一个 HTML 文件看到完整的沟通过程。
 
+![导出的会话轨迹 HTML](docs_screenshot.png)
+
 ```bash
 python3 sessgit.py init                    # 项目里建 .sessgit/
 python3 sessgit.py import 会话.jsonl        # 导入 Claude Code 会话
@@ -42,3 +44,7 @@ hub、分享链接、跨机器同步、merge agent、多 runtime 适配（暂只
 ## 状态
 
 v0.1 · 单文件 · ~350 行 · 标准库 only。
+
+## License
+
+MIT
