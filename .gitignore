@@ -1,4 +1,5 @@
 .sessgit/
 *.html
+!examples/*.html
 HANDOFF.md
 __pycache__/

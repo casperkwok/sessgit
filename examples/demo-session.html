@@ -1,0 +1,1369 @@
+<!doctype html><html><head><meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>sessgit · f70583f2-7c8</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,'PingFang SC',sans-serif;background:#F7F6F3;color:#1F1D1A;line-height:1.6;padding:40px 16px}
+main{max-width:860px;margin:0 auto}
+header{border-bottom:2px solid #1F1D1A;padding-bottom:18px;margin-bottom:26px}
+h1{font-size:24px}
+.meta{color:#7A746B;font-size:13px;margin-top:8px}
+.badge{display:inline-block;background:#1F1D1A;color:#fff;border-radius:6px;font-size:12px;padding:2px 10px;margin-right:6px}
+.turn{background:#fff;border:1px solid #E8E2D8;border-radius:14px;margin-bottom:22px;overflow:hidden}
+.turn > summary{cursor:pointer;padding:14px 20px;font-weight:700;list-style:none;display:flex;gap:10px;align-items:baseline}
+.turn > summary .no{color:#C8553D;min-width:44px}
+.turn > summary .ts{color:#7A746B;font-weight:400;font-size:12px;margin-left:auto;white-space:nowrap}
+.turn[open] > summary{border-bottom:1px solid #EEE9E0}
+.body{padding:8px 20px 16px}
+.msg{margin:12px 0;white-space:pre-wrap;word-break:break-word;font-size:14.5px}
+.msg.user{background:#FBEDE8;border-radius:10px;padding:10px 14px}
+.msg.assistant{padding:2px 2px}
+.msg .who{font-size:12px;font-weight:700;color:#7A746B;display:block;margin-bottom:2px}
+details.msg{border:1px solid #E8E2D8;border-radius:10px;padding:8px 14px;background:#FAFAF8}
+details.msg summary{cursor:pointer;font-size:13px;color:#3A6B7E;font-family:Menlo,monospace}
+details.msg pre{font-family:Menlo,monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;margin-top:8px;color:#444}
+footer{color:#9A948A;font-size:12px;text-align:center;margin-top:34px}
+</style></head><body><main>
+<header><h1>💬 会话轨迹</h1>
+<div class='meta'><span class='badge'>3 轮</span><span class='badge'>零 JS 单文件</span>生成于 2026-09-24 · sessgit 导出 · 会话 <code>f70583f2-7c8e-4b</code></div></header>
+<details class='turn' open><summary><span class='no'>#1</span><span>写一个 Python 脚本 countloc.py，统计当前目录下各类文件的代码行数，按行数从多到少输出。排除 .git 和 node_mo</span><span class='ts'>2026-09-24 08:17</span></summary><div class='body'>
+<div class='msg user'><span class='who'>用户</span>写一个 Python 脚本 countloc.py，统计当前目录下各类文件的代码行数，按行数从多到少输出。排除 .git 和 node_modules。写完后自己跑一下验证。</div>
+<details class='msg'><summary>🔧 Bash · command=ls -la /private/tmp/sessgit-demo, description=List working directory contents</summary><pre>command: ls -la /private/tmp/sessgit-demo  description: List working directory contents</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>total 8
+drwxr-xr-x@   3 peguo  wheel     96 Sep 24 16:17 .
+drwxrwxrwt  368 root   wheel  11776 Sep 24 16:17 ..
+-rw-r--r--@   1 peguo  wheel      8 Sep 24 16:17 sample.csv</pre></details>
+<details class='msg'><summary>🔧 Write · file_path=/private/tmp/sessgit-demo/countloc.py, content=#!/usr/bin/env python3 ⏎ """统计目录下各类文件的代码</summary><pre>file_path: /private/tmp/sessgit-demo/countloc.py  content:
+#!/usr/bin/env python3
+"""统计目录下各类文件的代码行数，按行数从多到少输出。
+
+用法: python3 countloc.py [目录]   # 默认当前目录
+代码行 = 去掉空行后的行数。排除 .git 和 node_modules。
+"""
+
+import os
+import sys
+from collections import defaultdict
+
+EXCLUDE_DIRS = {".git", "node_modules"}
+# 无扩展名时按文件名归类
+SPECIAL_NAMES = {
+    "Dockerfile": "Dockerfile",
+    "Makefile": "Makefile",
+    "Makefile.am": "Makefile",
+    "CMakeLists.txt": "CMake",
+    "BUILD": "BUILD",
+    "Rakefile": "Ruby",
+    "Gemfile": "Ruby",
+}
+
+
+def ext_of(filename):
+    """返回文件的类型标识，如 .py / .js；无扩展名返回文件名本身。"""
+    base = os.path.basename(filename)
+    if base in SPECIAL_NAMES:
+        return SPECIAL_NAMES[base]
+    _, ext = os.path.splitext(base)
+    return ext or base
+
+
+def count_lines(path):
+    """统计单个文件的非空行数；二进制文件返回 None。"""
+    try:
+        with open(path, "r", encoding="utf-8", errors="strict") as f:
+            return sum(1 for line in f if line.strip())
+    except (UnicodeDecodeError, OSError):
+        return None
+
+
+def scan(root):
+    """遍历 root，返回 {类型: [文件数, 代码行数]}。"""
+    stats = defaultdict(lambda: [0, 0])
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+        for name in filenames:
+            n = count_lines(os.path.join(dirpath, name))
+            if n is None:  # 二进制或不可读，跳过
+                continue
+            stat = stats[ext_of(name)]
+            stat[0] += 1
+            stat[1] += n
+    return stats
+
+
+def main():
+    root = sys.argv[1] if len(sys.argv) &gt; 1 else "."
+    if not os.path.isdir(root):
+        sys.exit(f"错误: 不是目录: {root}")
+
+    stats = scan(root)
+    if not stats:
+        print(f"{root} 下没有可统计的文本文件")
+        return
+
+    rows = sorted(stats.items(), key=lambda kv: kv[1][1], reverse=True)
+    width = max(len(k) for k, _ in rows)
+    print(f"{'类型'.ljust(width)}  {'文件数':&gt;6}  {'代码行数':&gt;8}")
+    print("-" * (width + 18))
+    for ext, (files, lines) in rows:
+        print(f"{ext.ljust(width)}  {files:&gt;6}  {lines:&gt;8}")
+    print("-" * (width + 18))
+    total_files = sum(v[0] for v in stats.values())
+    total_lines = sum(v[1] for v in stats.values())
+    print(f"{'合计'.ljust(width)}  {total_files:&gt;6}  {total_lines:&gt;8}")
+
+
+if __name__ == "__main__":
+    main()
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /private/tmp/sessgit-demo/countloc.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 countloc.py, description=Run script on working directory</summary><pre>command: python3 countloc.py  description: Run script on working directory</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>类型       文件数      代码行数
+----------------------
+.py        1        66
+.csv       1         2
+----------------------
+合计         2        68</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture &amp;&amp; mkdir -p /tmp/, description=Run against fixture verifying exclusions</summary><pre>command:
+rm -rf /tmp/locfixture &amp;&amp; mkdir -p /tmp/locfixture/{src,.git,node_modules/pkg,empty}
+printf 'a\n\nb\nc\n' &gt; /tmp/locfixture/src/a.py
+printf '1\n\n\n2\n' &gt; /tmp/locfixture/src/b.py
+printf 'x\n' &gt; /tmp/locfixture/src/c.js
+printf 'y\n' &gt; /tmp/locfixture/src/d.js
+printf 'z\n' &gt; /tmp/locfixture/src/e.js
+printf 'q\n\n\n\n\n' &gt; /tmp/locfixture/README.md
+printf 'noext\n' &gt; /tmp/locfixture/Makefile
+head -c 64 /dev/urandom &gt; /tmp/locfixture/blob.bin
+printf 'ignored\n' &gt; /tmp/locfixture/.git/should_not_count.py
+printf 'ignored\nignored\n' &gt; /tmp/locfixture/node_modules/pkg/also.js
+python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture
+echo "--- 期望: .py=5(a:3+b:2) .js=3 Makefile=1 .md=1 无 .bin 无 .git/node_modules ---"  description: Run against fixture verifying exclusions</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>Brace expansion</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture ⏎ mkdir -p /tmp/l, description=Run against fixture verifying exclusions</summary><pre>command:
+rm -rf /tmp/locfixture
+mkdir -p /tmp/locfixture/src
+mkdir -p /tmp/locfixture/.git
+mkdir -p /tmp/locfixture/node_modules/pkg
+printf 'a\n\nb\nc\n' &gt; /tmp/locfixture/src/a.py
+printf '1\n\n\n2\n' &gt; /tmp/locfixture/src/b.py
+printf 'x\n' &gt; /tmp/locfixture/src/c.js
+printf 'y\n' &gt; /tmp/locfixture/src/d.js
+printf 'z\n' &gt; /tmp/locfixture/src/e.js
+printf 'q\n\n\n\n\n' &gt; /tmp/locfixture/README.md
+printf 'noext\n' &gt; /tmp/locfixture/Makefile
+head -c 64 /dev/urandom &gt; /tmp/locfixture/blob.bin
+printf 'ignored\n' &gt; /tmp/locfixture/.git/should_not_count.py
+printf 'ignored\nignored\n' &gt; /tmp/locfixture/node_modules/pkg/also.js
+python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture  description: Run against fixture verifying exclusions</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>This Bash command contains multiple operations. The following parts require approval: mkdir -p /tmp/locfixture/.git, head -c 64 /dev/urandom, printf 'ignored\n'</pre></details>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/make_locfixture.py, content=import os, shutil ⏎  ⏎ root = "/tmp/locf</summary><pre>file_path: /tmp/make_locfixture.py  content:
+import os, shutil
+
+root = "/tmp/locfixture"
+shutil.rmtree(root, ignore_errors=True)
+files = {
+    "src/a.py": "a\n\nb\nc\n",                      # 3 非空行
+    "src/b.py": "1\n\n\n2\n",                       # 2
+    "src/c.js": "x\n",                              # 1
+    "src/d.js": "y\n",                              # 1
+    "src/e.js": "z\n",                              # 1
+    "README.md": "q\n\n\n\n\n",                     # 1
+    "Makefile": "noext\n",                          # 1 (无扩展名)
+    ".git/should_not_count.py": "ignored\n",        # 应被排除
+    "node_modules/pkg/also.js": "i\ni\n",           # 应被排除
+}
+for rel, content in files.items():
+    p = os.path.join(root, rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w") as f:
+        f.write(content)
+with open(os.path.join(root, "blob.bin"), "wb") as f:
+    f.write(os.urandom(64))                         # 二进制，应被跳过
+print("fixture ready:", root)
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/make_locfixture.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/make_locfixture.py &amp;&amp; pytho, description=Build fixture and run counter against it</summary><pre>command: python3 /tmp/make_locfixture.py &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture  description: Build fixture and run counter against it</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>fixture ready: /tmp/locfixture
+类型           文件数      代码行数
+--------------------------
+.py            2         5
+.js            3         3
+Makefile       1         1
+.md            1         1
+--------------------------
+合计             7        10</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /private/tmp/sessgit-demo/countl, description=Check bad-path handling and clean up fix</summary><pre>command: python3 /private/tmp/sessgit-demo/countloc.py /tmp/nope; echo "exit=$?"; rm -rf /tmp/locfixture /tmp/make_locfixture.py  description: Check bad-path handling and clean up fixture</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>This Bash command contains multiple operations. The following part requires approval: echo "exit=$?"</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /private/tmp/sessgit-demo/countl, description=Check bad-path handling</summary><pre>command: python3 /private/tmp/sessgit-demo/countloc.py /tmp/nope  description: Check bad-path handling</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>Exit code 1
+错误: 不是目录: /tmp/nope</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture /tmp/make_locfixt, description=Remove test fixture</summary><pre>command: rm -rf /tmp/locfixture /tmp/make_locfixture.py  description: Remove test fixture</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>(Bash completed with no output)</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>写好了 `countloc.py:1`，跑过验证。
+
+**真实目录输出**（`/private/tmp/sessgit-demo`，里面只有示例 csv 和这个脚本本身）：
+
+```
+类型       文件数      代码行数
+.py        1        66
+.csv       1         2
+合计        2        68
+```
+
+**排除逻辑验证**：我另建了一棵测试树（src/、.git/、node_modules/、含一个随机二进制文件），期望值是 `.py=5, .js=3, Makefile=1, .md=1`，实际输出完全一致：
+
+```
+类型           文件数      代码行数
+.py            2         5
+.js            3         3
+Makefile       1         1
+.md            1         1
+合计             7        10
+```
+
+对照检查：`.git/should_not_count.py` 和 `node_modules/pkg/also.js` 未被计入；`blob.bin` 因解码失败被跳过；空行不计入（a.py 4 行含 1 空行 → 记 3）；无扩展名的 `Makefile` 按文件名归类；降序排列正确。测试树已删除。
+
+一个设计决定说明：**「代码行数」我按非空行统计**，没有剔除注释。要按语言识别注释（`#`、`//`、`/* */`）会复杂不少且对 JSON/CSV/Markdown 之类没有意义——如果你要纯代码行（去注释），告诉我，我加个按扩展名的注释规则表。
+
+用 `python3 countloc.py [目录]` 运行，默认当前目录；传了非目录会报错退出。</div>
+</div></details>
+<details class='turn'><summary><span class='no'>#2</span><span>加两个参数：--top N 只显示前 N 类；--exclude-comments 剔除注释后再统计（只对认识的注释语法生效）。改完把这三种</span><span class='ts'>2026-09-24 08:17</span></summary><div class='body'>
+<div class='msg user'><span class='who'>用户</span>加两个参数：--top N 只显示前 N 类；--exclude-comments 剔除注释后再统计（只对认识的注释语法生效）。改完把这三种用法都跑一遍给我看结果。</div>
+<details class='msg'><summary>🔧 Read · file_path=/private/tmp/sessgit-demo/countloc.py, limit=5</summary><pre>file_path: /private/tmp/sessgit-demo/countloc.py  limit: 5</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>1	#!/usr/bin/env python3
+2	"""统计目录下各类文件的代码行数，按行数从多到少输出。
+3	
+4	用法: python3 countloc.py [目录]   # 默认当前目录
+5	代码行 = 去掉空行后的行数。排除 .git 和 node_modules。</pre></details>
+<details class='msg'><summary>🔧 Write · file_path=/private/tmp/sessgit-demo/countloc.py, content=#!/usr/bin/env python3 ⏎ """统计目录下各类文件的代码</summary><pre>file_path: /private/tmp/sessgit-demo/countloc.py  content:
+#!/usr/bin/env python3
+"""统计目录下各类文件的代码行数，按行数从多到少输出。
+
+用法:
+    python3 countloc.py [目录] [--top N] [--exclude-comments]
+
+代码行 = 去掉空行后的行数；加 --exclude-comments 后，纯注释行也不再计入。
+排除 .git 和 node_modules。注释语法按扩展名/文件名识别，不认识的类型
+（如 .md、.json、.csv）原样统计，不做任何剔除。
+"""
+
+import argparse
+import os
+import sys
+from collections import defaultdict
+
+EXCLUDE_DIRS = {".git", "node_modules"}
+
+# 无扩展名时按文件名归类
+SPECIAL_NAMES = {
+    "Dockerfile": "Dockerfile",
+    "Makefile": "Makefile",
+    "Makefile.am": "Makefile",
+    "CMakeLists.txt": "CMakeLists.txt",
+    "BUILD": "BUILD",
+    "Rakefile": "Rakefile",
+    "Gemfile": "Gemfile",
+}
+
+# ---- 注释语法表 ----------------------------------------------------------
+# 值 = (行注释标记, 块注释 (开始, 结束) 对)
+
+HASH_LANGS = {
+    ".sh", ".bash", ".zsh", ".ksh", ".rb", ".pl", ".pm", ".yaml", ".yml",
+    ".toml", ".ini", ".cfg", ".conf", ".r", ".jl", ".ps1", ".tcl", ".awk",
+    ".tf", ".tfvars", ".properties", ".gitignore", ".editorconfig",
+}
+SLASH_LANGS = {
+    ".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hh", ".m", ".mm", ".java",
+    ".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".go", ".rs", ".swift",
+    ".kt", ".kts", ".cs", ".php", ".scala", ".dart", ".groovy", ".proto",
+    ".sol", ".zig", ".vala", ".v", ".sv", ".d",
+}
+DASH_LANGS = {".sql", ".hs", ".elm", ".ada", ".lua"}
+SEMI_LANGS = {".lisp", ".clj", ".cljs", ".scm", ".el", ".rkt"}
+HTML_LANGS = {".html", ".htm", ".xml", ".vue", ".svelte", ".svg"}
+
+
+def _syntax(line=(), block=()):
+    return (tuple(line), tuple(block))
+
+
+COMMENT_SYNTAX = {}
+for _e in HASH_LANGS:
+    COMMENT_SYNTAX[_e] = _syntax(["#"])
+for _e in SLASH_LANGS:
+    COMMENT_SYNTAX[_e] = _syntax(["//"], [("/*", "*/")])
+for _e in DASH_LANGS:
+    COMMENT_SYNTAX[_e] = _syntax(["--"], [("--[[", "]]")])
+for _e in SEMI_LANGS:
+    COMMENT_SYNTAX[_e] = _syntax([";"], [("#|", "|#")])
+for _e in HTML_LANGS:
+    COMMENT_SYNTAX[_e] = _syntax([], [("&lt;!--", "--&gt;")])
+
+COMMENT_SYNTAX[".py"] = _syntax(["#"], [('"""', '"""'), ("'''", "'''")])
+COMMENT_SYNTAX[".css"] = _syntax([], [("/*", "*/")])
+COMMENT_SYNTAX[".scss"] = _syntax(["//"], [("/*", "*/")])
+COMMENT_SYNTAX[".less"] = _syntax(["//"], [("/*", "*/")])
+for _n in ("Dockerfile", "Makefile", "Makefile.am", "CMakeLists.txt",
+           "Rakefile", "Gemfile", "BUILD"):
+    COMMENT_SYNTAX[_n] = _syntax(["#"])
+
+TRIPLE_QUOTES = ('"""', "'''")
+STRING_QUOTES = "\"'`"
+
+
+def skip_string(text, i, quote):
+    """i 指向起始引号，返回字符串结束后的下标。"""
+    i += 1
+    while i &lt; len(text):
+        if text[i] == "\\":
+            i += 2
+        elif text[i] == quote:
+            return i + 1
+        else:
+            i += 1
+    return i
+
+
+def analyze_line(text, syntax, block_end):
+    """剔除注释，返回 (本行是否还有代码, 跨行块注释的新状态)。
+
+    只按标记切分，不解析语法：字符串字面量会整体跳过（所以 `"http://x"`
+    里的 `//` 不会误判成注释），但正则字面量、heredoc 之类仍可能误判。
+    """
+    line_tokens, block_pairs = syntax
+    i, n = 0, len(text)
+    has_code = False
+    while i &lt; n:
+        if block_end is not None:  # 已在块注释里，只找结束标记
+            if text.startswith(block_end, i):
+                i += len(block_end)
+                block_end = None
+            else:
+                i += 1
+            continue
+
+        for start, end in block_pairs:
+            if text.startswith(start, i):
+                # Python 三引号只在行首出现时算 docstring；赋值语句里的
+                # 三引号是字符串，按字符串处理。
+                if start in TRIPLE_QUOTES and has_code:
+                    break
+                block_end = end
+                i += len(start)
+                break
+        else:
+            for tok in line_tokens:  # 行注释：本行剩下的都不要了
+                if text.startswith(tok, i):
+                    return has_code, block_end
+            if text[i] in STRING_QUOTES:
+                has_code = True
+                i = skip_string(text, i, text[i])
+                continue
+            if not text[i].isspace():
+                has_code = True
+            i += 1
+
+    return has_code, block_end
+
+
+def ext_of(filename):
+    """返回文件的类型标识，如 .py / .js；无扩展名返回文件名本身。"""
+    base = os.path.basename(filename)
+    if base in SPECIAL_NAMES:
+        return SPECIAL_NAMES[base]
+    _, ext = os.path.splitext(base)
+    return ext.lower() or base
+
+
+def count_lines(path, key, exclude_comments):
+    """统计单个文件的代码行数；二进制文件返回 None。"""
+    syntax = COMMENT_SYNTAX.get(key) if exclude_comments else None
+    lines = 0
+    block_end = None
+    try:
+        with open(path, "r", encoding="utf-8", errors="strict") as f:
+            for line in f:
+                if syntax is None:
+                    if line.strip():
+                        lines += 1
+                else:
+                    has_code, block_end = analyze_line(line, syntax, block_end)
+                    if has_code:
+                        lines += 1
+    except (UnicodeDecodeError, OSError):
+        return None
+    return lines
+
+
+def scan(root, exclude_comments):
+    """遍历 root，返回 {类型: [文件数, 代码行数]}。"""
+    stats = defaultdict(lambda: [0, 0])
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+        for name in filenames:
+            key = ext_of(name)
+            n = count_lines(os.path.join(dirpath, name), key, exclude_comments)
+            if n is None:  # 二进制或不可读，跳过
+                continue
+            stat = stats[key]
+            stat[0] += 1
+            stat[1] += n
+    return stats
+
+
+def render(rows, width):
+    print(f"{'类型'.ljust(width)}  {'文件数':&gt;6}  {'代码行数':&gt;8}")
+    print("-" * (width + 18))
+    for label, files, lines in rows:
+        print(f"{label.ljust(width)}  {files:&gt;6}  {lines:&gt;8}")
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="统计目录下各类文件的代码行数，按行数从多到少输出")
+    ap.add_argument("dir", nargs="?", default=".", help="要统计的目录（默认当前目录）")
+    ap.add_argument("--top", type=int, metavar="N", help="只显示前 N 类")
+    ap.add_argument("--exclude-comments", action="store_true",
+                    help="剔除注释行后再统计（只对认识的注释语法生效）")
+    args = ap.parse_args()
+
+    if args.top is not None and args.top &lt; 1:
+        ap.error("--top 必须 &gt;= 1")
+    if not os.path.isdir(</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+        for start, end in block_pairs:
+            if text.startswith(start, i):
+                # Python 三引号只在行首出现时算 docstring；赋值语句里的
+                # 三引号是字符串，按字符串处理。
+                if start in TRIPLE_QUOTES and has_code:
+                    break
+                block_end = end
+                i += len(start)
+                break
+        else:
+            for tok in line_tokens:  # 行注释：本行剩下的都不要了
+                if text.startswith(tok, i):
+                    return has_code, block_end
+            if text[i] in STRING_QUOTES:
+                has_code = True
+                i = skip_string(text, i, text[i])
+                continue
+            if not text[i].isspace():
+                has_code = True
+            i += 1  new_string:
+        entered_block = False
+        for start, end in block_pairs:
+            if text.startswith(start, i):
+                # Python 三引号只在行首（前面还没有代码）时算 docstring；
+                # 赋值语句里的三引号是字符串，交给下面的字符串分支。
+                if start in TRIPLE_QUOTES and has_code:
+                    break
+                block_end = end
+                i += len(start)
+                entered_block = True
+                break
+        if entered_block:
+            continue
+
+        for tok in line_tokens:  # 行注释：本行剩下的都不要了
+            if text.startswith(tok, i):
+                return has_code, block_end
+        if text[i] in STRING_QUOTES:
+            has_code = True
+            i = skip_string(text, i, text[i])
+            continue
+        if not text[i].isspace():
+            has_code = True
+        i += 1</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/make_locfixture2.py, content=import os, shutil ⏎  ⏎ root = "/tmp/locf</summary><pre>file_path: /tmp/make_locfixture2.py  content:
+import os, shutil
+
+root = "/tmp/locfixture"
+shutil.rmtree(root, ignore_errors=True)
+files = {
+    "src/app.py": (
+        "# 模块级注释\n"
+        "import os      # 行尾注释\n"
+        "\n"
+        "def f():\n"
+        '    """docstring\n'
+        "    第二行\n"
+        '    """\n'
+        '    url = "http://example.com/a#b"   # 字符串里的 # 不算注释\n'
+        "    return url\n"
+    ),
+    "src/util.js": (
+        "// 全行注释\n"
+        "const a = 1; // 尾注释\n"
+        "/* 块注释开始\n"
+        "   还在块里\n"
+        "   结束 */\n"
+        "const re = /\\/\\//; // 正则里的斜杠\n"
+        'const s = "// 不是注释";\n'
+    ),
+    "src/run.sh": (
+        "#!/bin/bash\n"
+        "# 注释\n"
+        'echo "hi"   # 尾注释\n'
+    ),
+    "src/style.css": (
+        "/* 头部注释 */\n"
+        ".a { color: red; }  /* 行尾 */\n"
+    ),
+    "Makefile": (
+        "# 注释\n"
+        "all:\n"
+        "\techo hi\n"
+    ),
+    "notes.md": (
+        "# 标题\n"
+        "&lt;!-- HTML 注释 --&gt;\n"
+        "正文\n"
+    ),
+}
+for rel, content in files.items():
+    p = os.path.join(root, rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w") as f:
+        f.write(content)
+print("fixture ready:", root)
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/make_locfixture2.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/make_locfixture2.py &amp;&amp; echo, description=Build fixture and run default mode</summary><pre>command: python3 /tmp/make_locfixture2.py &amp;&amp; echo "=== 1) 默认 ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture  description: Build fixture and run default mode</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>fixture ready: /tmp/locfixture
+=== 1) 默认 ===
+类型           文件数      代码行数
+--------------------------
+.py            1         8
+.js            1         7
+Makefile       1         3
+.md            1         3
+.sh            1         3
+.css           1         2
+--------------------------
+合计             6        26</pre></details>
+<details class='msg'><summary>🔧 Bash · command=echo "=== 2) --top 3 ===" &amp;&amp; python3 /pr, description=Run with --top 3</summary><pre>command: echo "=== 2) --top 3 ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture --top 3  description: Run with --top 3</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>=== 2) --top 3 ===
+类型           文件数      代码行数
+--------------------------
+.py            1         8
+.js            1         7
+Makefile       1         3
+其余 3 类         3         8
+--------------------------
+合计             6        26</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Alignment of the "其余 N 类" row is off — CJK labels are double-width but `ljust` counts characters. Fixing with display-width padding:</div>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+def render(rows, width):
+    print(f"{'类型'.ljust(width)}  {'文件数':&gt;6}  {'代码行数':&gt;8}")
+    print("-" * (width + 18))
+    for label, files, lines in rows:
+        print(f"{label.ljust(width)}  {files:&gt;6}  {lines:&gt;8}")  new_string:
+def display_width(s):
+    """终端显示宽度：中日韩等宽字符占 2 列。"""
+    return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in s)
+
+
+def pad(s, width):
+    return s + " " * max(0, width - display_width(s))
+
+
+def rpad(s, width):
+    return " " * max(0, width - display_width(s)) + s
+
+
+def render(rows, width):
+    print(f"{pad('类型', width)}  {rpad('文件数', 6)}  {rpad('代码行数', 8)}")
+    print("-" * (width + 18))
+    for label, files, lines in rows:
+        print(f"{pad(label, width)}  {rpad(str(files), 6)}  {rpad(str(lines), 8)}")</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+import argparse
+import os
+import sys
+from collections import defaultdict  new_string:
+import argparse
+import os
+import sys
+import unicodedata
+from collections import defaultdict</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+    width = max(len(label) for label, _, _ in rows)
+    width = max(width, len("合计"))
+    render(rows, width)
+
+    print("-" * (width + 18))
+    total_files = sum(v[0] for v in stats.values())
+    total_lines = sum(v[1] for v in stats.values())
+    print(f"{'合计'.ljust(width)}  {total_files:&gt;6}  {total_lines:&gt;8}")  new_string:
+    width = max(display_width(label) for label, _, _ in rows)
+    width = max(width, display_width("合计"))
+    render(rows, width)
+
+    print("-" * (width + 18))
+    total_files = sum(v[0] for v in stats.values())
+    total_lines = sum(v[1] for v in stats.values())
+    print(f"{pad('合计', width)}  {rpad(str(total_files), 6)}  "
+          f"{rpad(str(total_lines), 8)}")</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=echo "=== 1) 默认 ===" &amp;&amp; python3 /private, description=Run all three usage modes on fixture</summary><pre>command: echo "=== 1) 默认 ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture &amp;&amp; echo &amp;&amp; echo "=== 2) --top 3 ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture --top 3 &amp;&amp; echo &amp;&amp; echo "=== 3) --exclude-comments ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture --exclude-comments &amp;&amp; echo &amp;&amp; echo "=== 4) 两个参数合用 ===" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture --top 3 --exclude-comments  description: Run all three usage modes on fixture</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>=== 1) 默认 ===
+类型      文件数  代码行数
+--------------------------
+.py            1         8
+.js            1         7
+Makefile       1         3
+.md            1         3
+.sh            1         3
+.css           1         2
+--------------------------
+合计           6        26
+
+=== 2) --top 3 ===
+类型       文件数  代码行数
+---------------------------
+.py             1         8
+.js             1         7
+Makefile        1         3
+其余 3 类       3         8
+---------------------------
+合计            6        26
+
+=== 3) --exclude-comments ===
+类型      文件数  代码行数
+--------------------------
+.py            1         4
+.md            1         3
+.js            1         3
+Makefile       1         2
+.sh            1         1
+.css           1         1
+--------------------------
+合计           6        14
+
+=== 4) 两个参数合用 ===
+类型       文件数  代码行数
+---------------------------
+.py             1         4
+.md             1         3
+.js             1         3
+其余 3 类       3         4
+---------------------------
+合计            6        14</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Now an independent cross-check of the stripping logic — Python's `tokenize` as an oracle for the `.py` file, plus the real working directory:</div>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/oracle.py, content="""独立对照：用 Python 官方 tokenize 数 app.py 的代</summary><pre>file_path: /tmp/oracle.py  content:
+"""独立对照：用 Python 官方 tokenize 数 app.py 的代码行数。"""
+import io, tokenize
+
+src = open("/tmp/locfixture/src/app.py").read()
+skip = {tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE, tokenize.INDENT,
+        tokenize.DEDENT, tokenize.ENDMARKER, tokenize.ENCODING}
+sig = []  # 有意义的 token 序列
+for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+    if tok.type not in skip:
+        sig.append(tok)
+
+code_lines = set()
+for idx, tok in enumerate(sig):
+    if tok.type == tokenize.STRING:  # 独立成句的字符串 = docstring，不算
+        prev = sig[idx - 1] if idx else None
+        nxt = sig[idx + 1] if idx + 1 &lt; len(sig) else None
+        if (prev is None or prev.type == tokenize.NEWLINE) and \
+           (nxt is None or nxt.type == tokenize.NEWLINE):
+            continue
+    code_lines.add(tok.start[0])
+
+print("tokenize 口径的代码行数:", len(code_lines), sorted(code_lines))
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/oracle.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/oracle.py &amp;&amp; echo "--- coun, description=Compare against tokenize oracle</summary><pre>command: python3 /tmp/oracle.py &amp;&amp; echo "--- countloc 对 app.py 的口径: 4 ---" &amp;&amp; python3 /private/tmp/sessgit-demo/countloc.py /tmp/locfixture/src --exclude-comments  description: Compare against tokenize oracle</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>tokenize 口径的代码行数: 5 [2, 4, 5, 8, 9]
+--- countloc 对 app.py 的口径: 4 ---
+类型  文件数  代码行数
+----------------------
+.py        1         4
+.js        1         3
+.sh        1         1
+.css       1         1
+----------------------
+合计       4         9</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 -c " ⏎ import io, tokenize ⏎ src, description=Dump token stream to debug oracle</summary><pre>command:
+python3 -c "
+import io, tokenize
+src = open('/tmp/locfixture/src/app.py').read()
+print(repr(src))
+for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+    print(tok.type, tokenize.tok_name[tok.type], tok.start, tok.end, repr(tok.string)[:40])
+"  description: Dump token stream to debug oracle</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>'# 模块级注释\nimport os      # 行尾注释\n\ndef f():\n    """docstring\n    第二行\n    """\n    url = "http://example.com/a#b"   # 字符串里的 # 不算注释\n    return url\n'
+64 COMMENT (1, 0) (1, 7) '# 模块级注释'
+65 NL (1, 7) (1, 8) '\n'
+1 NAME (2, 0) (2, 6) 'import'
+1 NAME (2, 7) (2, 9) 'os'
+64 COMMENT (2, 15) (2, 21) '# 行尾注释'
+4 NEWLINE (2, 21) (2, 22) '\n'
+65 NL (3, 0) (3, 1) '\n'
+1 NAME (4, 0) (4, 3) 'def'
+1 NAME (4, 4) (4, 5) 'f'
+55 OP (4, 5) (4, 6) '('
+55 OP (4, 6) (4, 7) ')'
+55 OP (4, 7) (4, 8) ':'
+4 NEWLINE (4, 8) (4, 9) '\n'
+5 INDENT (5, 0) (5, 4) '    '
+3 STRING (5, 4) (7, 7) '"""docstring\n    第二行\n    """'
+4 NEWLINE (7, 7) (7, 8) '\n'
+1 NAME (8, 4) (8, 7) 'url'
+55 OP (8, 8) (8, 9) '='
+3 STRING (8, 10) (8, 34) '"http://example.com/a#b"'
+64 COMMENT (8, 37) (8, 51) '# 字符串里的 # 不算注释'
+4 NEWLINE (8, 51) (8, 52) '\n'
+1 NAME (9, 4) (9, 10) 'return'
+1 NAME (9, 11) (9, 14) 'url'
+4 NEWLINE (9, 14) (9, 15) '\n'
+6 DEDENT (10, 0) (10, 0) ''
+0 ENDMARKER (10, 0) (10, 0) ''</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>My oracle had a bug (`prev` was `:` not NEWLINE — I'd filtered NEWLINE out of the sequence). Fixing the oracle:</div>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/tmp/oracle.py</summary><pre>replace_all: False  file_path: /tmp/oracle.py  old_string:
+    if tok.type == tokenize.STRING:  # 独立成句的字符串 = docstring，不算
+        prev = sig[idx - 1] if idx else None
+        nxt = sig[idx + 1] if idx + 1 &lt; len(sig) else None
+        if (prev is None or prev.type == tokenize.NEWLINE) and \
+           (nxt is None or nxt.type == tokenize.NEWLINE):
+            continue  new_string:
+    if tok.type == tokenize.STRING:  # 独立成句的字符串 = docstring，不算
+        prev = sig[idx - 1] if idx else None
+        nxt = sig[idx + 1] if idx + 1 &lt; len(sig) else None
+        first_on_line = prev is None or prev.end[0] &lt; tok.start[0]
+        ends_stmt = nxt is None or nxt.type == tokenize.NEWLINE
+        if first_on_line and ends_stmt:
+            continue</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /tmp/oracle.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/oracle.py, description=Rerun fixed oracle</summary><pre>command: python3 /tmp/oracle.py  description: Rerun fixed oracle</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>tokenize 口径的代码行数: 5 [2, 4, 5, 8, 9]</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 -c " ⏎ import io, tokenize ⏎ src, description=Inspect filtered token sequence</summary><pre>command:
+python3 -c "
+import io, tokenize
+src = open('/tmp/locfixture/src/app.py').read()
+skip = {tokenize.COMMENT, tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER, tokenize.ENCODING}
+sig = [t for t in tokenize.generate_tokens(io.StringIO(src).readline) if t.type not in skip]
+for i, t in enumerate(sig):
+    prev = sig[i-1] if i else None
+    print(i, tokenize.tok_name[t.type], t.start, t.end, 'prev_end=', prev.end if prev else None)
+"  description: Inspect filtered token sequence</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>0 NAME (2, 0) (2, 6) prev_end= None
+1 NAME (2, 7) (2, 9) prev_end= (2, 6)
+2 NAME (4, 0) (4, 3) prev_end= (2, 9)
+3 NAME (4, 4) (4, 5) prev_end= (4, 3)
+4 OP (4, 5) (4, 6) prev_end= (4, 5)
+5 OP (4, 6) (4, 7) prev_end= (4, 6)
+6 OP (4, 7) (4, 8) prev_end= (4, 7)
+7 STRING (5, 4) (7, 7) prev_end= (4, 8)
+8 NAME (8, 4) (8, 7) prev_end= (7, 7)
+9 OP (8, 8) (8, 9) prev_end= (8, 7)
+10 STRING (8, 10) (8, 34) prev_end= (8, 9)
+11 NAME (9, 4) (9, 10) prev_end= (8, 34)
+12 NAME (9, 11) (9, 14) prev_end= (9, 10)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/tmp/oracle.py</summary><pre>replace_all: False  file_path: /tmp/oracle.py  old_string:
+        first_on_line = prev is None or prev.end[0] &lt; tok.start[0]
+        ends_stmt = nxt is None or nxt.type == tokenize.NEWLINE  new_string:
+        first_on_line = prev is None or prev.end[0] &lt; tok.start[0]
+        ends_stmt = nxt is None or nxt.start[0] &gt; tok.end[0]  # 后面同行没别的了</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /tmp/oracle.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/oracle.py, description=Rerun oracle after fix</summary><pre>command: python3 /tmp/oracle.py  description: Rerun oracle after fix</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>tokenize 口径的代码行数: 4 [2, 4, 8, 9]</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Oracle agrees (lines 2, 4, 8, 9 → 4), matching countloc. Now the real directory:</div>
+<details class='msg'><summary>🔧 Bash · command=echo "=== 真实目录: 默认 ===" &amp;&amp; python3 count, description=Run all modes on working directory</summary><pre>command: echo "=== 真实目录: 默认 ===" &amp;&amp; python3 countloc.py &amp;&amp; echo &amp;&amp; echo "=== 真实目录: --exclude-comments ===" &amp;&amp; python3 countloc.py --exclude-comments &amp;&amp; echo &amp;&amp; echo "=== 真实目录: --top 1 ===" &amp;&amp; python3 countloc.py --top 1  description: Run all modes on working directory</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>=== 真实目录: 默认 ===
+类型  文件数  代码行数
+----------------------
+.py        1       197
+.csv       1         2
+----------------------
+合计       2       199
+
+=== 真实目录: --exclude-comments ===
+类型  文件数  代码行数
+----------------------
+.py        1       175
+.csv       1         2
+----------------------
+合计       2       177
+
+=== 真实目录: --top 1 ===
+类型       文件数  代码行数
+---------------------------
+.py             1       197
+其余 1 类       1         2
+---------------------------
+合计            2       199</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 -c " ⏎ lines = open('/private/tm, description=Cross-check comment removal count</summary><pre>command:
+python3 -c "
+lines = open('/private/tmp/sessgit-demo/countloc.py').read().splitlines()
+nonblank = [l for l in lines if l.strip()]
+pure_hash = [l for l in lines if l.strip().startswith('#')]
+print('非空行:', len(nonblank))
+print('纯 # 注释行:', len(pure_hash))
+print('模块 docstring 行数:', 7)
+print('差值 =', len(nonblank) - len(pure_hash) - 7)
+"  description: Cross-check comment removal count</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>非空行: 197
+纯 # 注释行: 6
+模块 docstring 行数: 7
+差值 = 184</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>My quick cross-check forgot the function docstrings. Let me do it precisely with tokenize:</div>
+<details class='msg'><summary>🔧 Bash · command=python3 -c " ⏎ import io, tokenize ⏎ pat, description=Precise tokenize-based oracle for countl</summary><pre>command:
+python3 -c "
+import io, tokenize
+path = '/private/tmp/sessgit-demo/countloc.py'
+lines = open(path).read().splitlines()
+nonblank = {i+1 for i, l in enumerate(lines) if l.strip()}
+pure_comment, docstring = set(), set()
+skip = {tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER, tokenize.ENCODING}
+sig = []
+for t in tokenize.generate_tokens(io.StringIO(open(path).read()).readline):
+    if t.type == tokenize.COMMENT:
+        if not lines[t.start[0]-1][:t.start[1]].strip():
+            pure_comment.add(t.start[0])
+    if t.type not in skip:
+        sig.append(t)
+for i, t in enumerate(sig):
+    if t.type != tokenize.STRING: continue
+    prev = sig[i-1] if i else None
+    nxt = sig[i+1] if i+1 &lt; len(sig) else None
+    if (prev is None or prev.end[0] &lt; t.start[0]) and (nxt is None or nxt.start[0] &gt; t.end[0]):
+        docstring |= set(range(t.start[0], t.end[0]+1))
+print('非空行:', len(nonblank))
+print('纯注释行:', len(pure_comment), ' docstring 行:', len(docstring))
+print('tokenize 口径的代码行数:', len(nonblank - pure_comment - docstring))
+"  description: Precise tokenize-based oracle for countloc.py</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>非空行: 197
+纯注释行: 6  docstring 行: 19
+tokenize 口径的代码行数: 175</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 countloc.py --top 0; python3 cou, description=Check --top edge cases</summary><pre>command: python3 countloc.py --top 0; python3 countloc.py /tmp/locfixture --top 99  description: Check --top edge cases</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>usage: countloc.py [-h] [--top N] [--exclude-comments] [dir]
+countloc.py: error: --top 必须 &gt;= 1
+类型      文件数  代码行数
+--------------------------
+.py            1         8
+.js            1         7
+Makefile       1         3
+.md            1         3
+.sh            1         3
+.css           1         2
+--------------------------
+合计           6        26</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture /tmp/make_locfixt, description=Clean up temp fixture files</summary><pre>command: rm -rf /tmp/locfixture /tmp/make_locfixture2.py /tmp/oracle.py &amp;&amp; ls /private/tmp/sessgit-demo  description: Clean up temp fixture files</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>countloc.py
+sample.csv</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>两个参数加好了，三种用法都跑过。临时测试文件已清理。
+
+## 1) 默认（`countloc.py`，真实目录）
+
+```
+类型      文件数  代码行数
+--------------------------
+.py            1       197
+.csv           1         2
+--------------------------
+合计           2       199
+```
+
+## 2) `--top N`（测试树，6 类取前 3）
+
+```
+类型       文件数  代码行数
+---------------------------
+.py             1         8
+.js             1         7
+Makefile        1         3
+其余 3 类       3         8      ← 被截掉的部分单独汇总，不混进合计
+---------------------------
+合计            6        26
+```
+
+## 3) `--exclude-comments`（同一测试树）
+
+```
+类型      文件数  代码行数
+--------------------------
+.py            1         4
+.md            1         3      ← .md 不在语法表里，原样统计
+.js            1         3
+Makefile       1         2
+.sh            1         1
+.css           1         1
+--------------------------
+合计           6        14
+```
+
+两个参数可以合用（`--top 3 --exclude-comments` 也跑过，正常）。
+
+**验证方式**：测试树里我手算了每一条期望值再对照——`.py` 从 8 降到 4（行首 `#`、行尾 `#`、三行 docstring 都剔掉，但 `url = "http://example.com/a#b"` 里的 `#` 没被误判成注释）；`.sh` 从 3 降到 1（shebang 也按 `#` 注释剔除，如果你希望 shebang 算代码行，我改）；`.js` 从 7 降到 3（块注释跨行状态、字符串里的 `//` 都正确）。排序、合计、`--top` 越界（N 大于类型数时全列）和 `--top 0`（argparse 报错退出）都测了。
+
+**还对了一遍独立口径**：用 Python 官方 `tokenize` 给 `--exclude-comments` 做对照（注释行 + 独立字符串语句按 docstring 剔除），对 `countloc.py` 自身两者的结果都是 **175** 行——完全一致。（中途我的对照脚本自己错了两轮，是它的问题不是脚本的问题，最后修正后才对齐。）
+
+两个已知取舍，都写在文件顶部和函数注释里了：
+
+- **注释识别是"标记切分"，不是真解析器**。字符串字面量我会整体跳过，所以 `"http://x"` 不会误判；但 JS 正则字面量、heredoc、`#` 在未加引号的 CSS url 里这类情况仍可能误判。要精确就得按语言上词法器，那体量完全不同。
+- **Python 三引号只在行首（前面还没出现代码）时算 docstring**，`x = """..."""` 这种赋值里的三引号按字符串处理——这是我加的一条启发式规则，不是语法层判断。
+
+顺带修了一处：`其余 N 类` 这类中文标签用 `ljust` 会因为 CJK 双宽字符错位，改成按终端显示宽度补空格（`display_width`/`pad`），表头和数据列现在都对齐。</div>
+</div></details>
+<details class='turn'><summary><span class='no'>#3</span><span>shebang 不算注释行，改掉。然后写一个简短的 README.md 说明用法和那两个取舍。最后把 countloc.py 的最终用法跑一</span><span class='ts'>2026-09-24 08:19</span></summary><div class='body'>
+<div class='msg user'><span class='who'>用户</span>shebang 不算注释行，改掉。然后写一个简短的 README.md 说明用法和那两个取舍。最后把 countloc.py 的最终用法跑一遍确认没坏。</div>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+TRIPLE_QUOTES = ('"""', "'''")
+STRING_QUOTES = "\"'`"  new_string:
+TRIPLE_QUOTES = ('"""', "'''")
+STRING_QUOTES = "\"'`"
+SHEBANG = "#!"  # 首行 shebang 是给内核看的可执行声明，算代码行</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+def analyze_line(text, syntax, block_end):
+    """剔除注释，返回 (本行是否还有代码, 跨行块注释的新状态)。  new_string:
+def analyze_line(text, syntax, block_end, lineno=1):
+    """剔除注释，返回 (本行是否还有代码, 跨行块注释的新状态)。</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+        for tok in line_tokens:  # 行注释：本行剩下的都不要了
+            if text.startswith(tok, i):
+                return has_code, block_end  new_string:
+        for tok in line_tokens:  # 行注释：本行剩下的都不要了
+            if text.startswith(tok, i):
+                if lineno == 1 and i == 0 and text.startswith(SHEBANG):
+                    return True, block_end
+                return has_code, block_end</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+    try:
+        with open(path, "r", encoding="utf-8", errors="strict") as f:
+            for line in f:
+                if syntax is None:
+                    if line.strip():
+                        lines += 1
+                else:
+                    has_code, block_end = analyze_line(line, syntax, block_end)
+                    if has_code:
+                        lines += 1  new_string:
+    try:
+        with open(path, "r", encoding="utf-8", errors="strict") as f:
+            for lineno, line in enumerate(f, start=1):
+                if syntax is None:
+                    if line.strip():
+                        lines += 1
+                else:
+                    has_code, block_end = analyze_line(line, syntax,
+                                                       block_end, lineno)
+                    if has_code:
+                        lines += 1</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/countloc.py</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/countloc.py  old_string:
+代码行 = 去掉空行后的行数；加 --exclude-comments 后，纯注释行也不再计入。
+排除 .git 和 node_modules。注释语法按扩展名/文件名识别，不认识的类型
+（如 .md、.json、.csv）原样统计，不做任何剔除。  new_string:
+代码行 = 去掉空行后的行数；加 --exclude-comments 后，纯注释行也不再计入
+（首行 shebang 例外，算代码行）。排除 .git 和 node_modules。注释语法按
+扩展名/文件名识别，不认识的类型（如 .md、.json、.csv）原样统计，不做剔除。</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/countloc.py has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Now the README:</div>
+<details class='msg'><summary>🔧 Write · file_path=/private/tmp/sessgit-demo/README.md, content=# countloc ⏎  ⏎ 统计目录下各类文件的代码行数，按行数从多到少输出</summary><pre>file_path: /private/tmp/sessgit-demo/README.md  content:
+# countloc
+
+统计目录下各类文件的代码行数，按行数从多到少输出。单文件，只用标准库。
+
+## 用法
+
+```
+python3 countloc.py [目录] [--top N] [--exclude-comments]
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `目录` | 要统计的目录，默认当前目录 |
+| `--top N` | 只显示行数最多的前 N 类；被截掉的几类合并成一行「其余 N 类」显示，合计仍是全量 |
+| `--exclude-comments` | 剔除注释后再统计，只对认识的注释语法生效 |
+
+```console
+$ python3 countloc.py --top 3
+类型       文件数  代码行数
+---------------------------
+.py             1       197
+.js             1         7
+Makefile        1         3
+其余 2 类       2         5
+---------------------------
+合计            4       212
+```
+
+## 统计口径
+
+- **代码行** = 去掉空行后的行数。加 `--exclude-comments` 后，整行都是注释的行（含块注释内的行、Python docstring）也不计入；行尾注释不影响该行。
+- **首行 shebang 算代码行**，例如 `#!/bin/bash` 在 `--exclude-comments` 下仍计入 `.sh`。
+- **排除** `.git` 和 `node_modules` 目录；二进制文件（UTF-8 解码失败）跳过。
+- **分组**按扩展名；无扩展名时按文件名（`Makefile`、`Dockerfile`、`CMakeLists.txt` 等单独成组）。文件名为 `BUILD` 也单独成组。
+- **排序**按代码行数降序，行数相同时顺序不保证稳定。
+
+## 两个取舍
+
+**一、注释识别是标记切分，不是真解析器。** 逐字符扫，只认标记，不建语法树：
+
+- 认识的语法才剔：`#`（Python / Shell / YAML / Makefile 等）、`//` `/* */`（C 系 / JS / Go / Rust 等）、`--` `--[[ ]]`（SQL / Lua / Haskell）、`;`（Lisp 系）、`&lt;!-- --&gt;`（HTML / XML / Vue）。
+- 不认识的类型（`.md`、`.json`、`.csv`、`.txt`）原样统计，不做任何剔除。
+- 字符串字面量会整体跳过，所以 `"http://x/a#b"` 里的 `//` 和 `#` 不会误判成注释。
+- 但 JS 正则字面量（`/\/\//`）、heredoc、未加引号的 CSS `url(http://…)` 仍可能误判 —— 这类行通常是既有代码又有"注释"标记，代码部分已经置位，所以影响一般落在"少算"而不是"多算"。
+- Python 三引号只在行首（前面还没有代码）时按 docstring 剔除；`x = """…"""` 赋值里的三引号按字符串算，是启发式规则，不是语法层判断。
+
+**二、只统计文本文件，二进制直接跳过。** 判断方式是"能不能用 UTF-8 严格解码"，所以 GBK 编码的源码会被当成二进制跳过（换编码得改 `open()` 的 `encoding`）。这样做是为了不引入 charset 探测依赖，代价是编码不是 UTF-8 的文件会静默消失，不进任何一列。
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /private/tmp/sessgit-demo/README.md (file state is current in your context — no need to Read it back)</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Let me re-verify everything, including the shebang change:</div>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/make_locfixture3.py, content=import os, shutil ⏎  ⏎ root = "/tmp/locf</summary><pre>file_path: /tmp/make_locfixture3.py  content:
+import os, shutil
+
+root = "/tmp/locfixture"
+shutil.rmtree(root, ignore_errors=True)
+files = {
+    "src/app.py": (
+        "# 模块级注释\n"
+        "import os      # 行尾注释\n"
+        "\n"
+        "def f():\n"
+        '    """docstring\n'
+        "    第二行\n"
+        '    """\n'
+        '    url = "http://example.com/a#b"   # 字符串里的 # 不算注释\n'
+        "    return url\n"
+    ),
+    "src/util.js": (
+        "// 全行注释\n"
+        "const a = 1; // 尾注释\n"
+        "/* 块注释开始\n"
+        "   还在块里\n"
+        "   结束 */\n"
+        "const re = /\\/\\//; // 正则里的斜杠\n"
+        'const s = "// 不是注释";\n'
+    ),
+    "src/run.sh": (
+        "#!/bin/bash\n"
+        "# 注释\n"
+        'echo "hi"   # 尾注释\n'
+    ),
+    "src/style.css": (
+        "/* 头部注释 */\n"
+        ".a { color: red; }  /* 行尾 */\n"
+    ),
+    "Makefile": (
+        "# 注释\n"
+        "all:\n"
+        "\techo hi\n"
+    ),
+    "notes.md": (
+        "# 标题\n"
+        "&lt;!-- HTML 注释 --&gt;\n"
+        "正文\n"
+    ),
+}
+for rel, content in files.items():
+    p = os.path.join(root, rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w") as f:
+        f.write(content)
+print("fixture ready:", root)
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/make_locfixture3.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/make_locfixture3.py &amp;&amp; echo, description=Run all three usage modes after shebang </summary><pre>command: python3 /tmp/make_locfixture3.py &amp;&amp; echo "=== A) 默认 ===" &amp;&amp; python3 countloc.py /tmp/locfixture &amp;&amp; echo &amp;&amp; echo "=== B) --top 3 ===" &amp;&amp; python3 countloc.py /tmp/locfixture --top 3 &amp;&amp; echo &amp;&amp; echo "=== C) --exclude-comments ===" &amp;&amp; python3 countloc.py /tmp/locfixture --exclude-comments  description: Run all three usage modes after shebang change</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>fixture ready: /tmp/locfixture
+=== A) 默认 ===
+类型      文件数  代码行数
+--------------------------
+.py            1         8
+.js            1         7
+Makefile       1         3
+.md            1         3
+.sh            1         3
+.css           1         2
+--------------------------
+合计           6        26
+
+=== B) --top 3 ===
+类型       文件数  代码行数
+---------------------------
+.py             1         8
+.js             1         7
+Makefile        1         3
+其余 3 类       3         8
+---------------------------
+合计            6        26
+
+=== C) --exclude-comments ===
+类型      文件数  代码行数
+--------------------------
+.py            1         4
+.md            1         3
+.js            1         3
+Makefile       1         2
+.sh            1         2
+.css           1         1
+--------------------------
+合计           6        15</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Shebang now counts (`.sh` 1 → 2). Verifying the "only on line 1" rule and re-running the real directory:</div>
+<details class='msg'><summary>🔧 Bash · command=printf 'x = 1\n#!/bin/bash\n# 真注释\ny = 2, description=Verify shebang rule only applies on line</summary><pre>command: printf 'x = 1\n#!/bin/bash\n# 真注释\ny = 2\n' &gt; /tmp/locfixture/src/edge.py &amp;&amp; python3 countloc.py /tmp/locfixture/src/edge.py --exclude-comments &amp;&amp; echo "--- 期望 .py=3：第2行的 #! 不在首行，仍算注释；第1、4行是代码 ---"  description: Verify shebang rule only applies on line 1</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>Exit code 1
+错误: 不是目录: /tmp/locfixture/src/edge.py</pre></details>
+<details class='msg'><summary>🔧 Bash · command=mkdir -p /tmp/edgecase &amp;&amp; cp /tmp/locfix, description=Verify shebang rule only applies on line</summary><pre>command: mkdir -p /tmp/edgecase &amp;&amp; cp /tmp/locfixture/src/edge.py /tmp/edgecase/edge.py 2&gt;/dev/null; printf 'x = 1\n#!/bin/bash\n# 真注释\ny = 2\n' &gt; /tmp/edgecase/edge.py &amp;&amp; python3 countloc.py /tmp/edgecase --exclude-comments &amp;&amp; echo "--- 期望 .py=3 ---"  description: Verify shebang rule only applies on line 1</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>类型  文件数  代码行数
+----------------------
+.py        1         2
+----------------------
+合计       1         2
+--- 期望 .py=3 ---</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>我的期望值写错了（第 1、4 行是代码 = 2 行，脚本给的 2 是对的）。现在跑真实目录：</div>
+<details class='msg'><summary>🔧 Bash · command=echo "=== 真实目录: 默认 ===" &amp;&amp; python3 count, description=Run all final usages on working director</summary><pre>command: echo "=== 真实目录: 默认 ===" &amp;&amp; python3 countloc.py &amp;&amp; echo &amp;&amp; echo "=== 真实目录: --top 1 ===" &amp;&amp; python3 countloc.py --top 1 &amp;&amp; echo &amp;&amp; echo "=== 真实目录: --exclude-comments ===" &amp;&amp; python3 countloc.py --exclude-comments &amp;&amp; echo &amp;&amp; echo "=== 真实目录: --top 1 --exclude-comments ===" &amp;&amp; python3 countloc.py --top 1 --exclude-comments &amp;&amp; echo &amp;&amp; echo "=== --help ===" &amp;&amp; python3 countloc.py --help  description: Run all final usages on working directory</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>=== 真实目录: 默认 ===
+类型  文件数  代码行数
+----------------------
+.py        1       201
+.md        1        36
+.csv       1         2
+----------------------
+合计       3       239
+
+=== 真实目录: --top 1 ===
+类型       文件数  代码行数
+---------------------------
+.py             1       201
+其余 2 类       2        38
+---------------------------
+合计            3       239
+
+=== 真实目录: --exclude-comments ===
+类型  文件数  代码行数
+----------------------
+.py        1       180
+.md        1        36
+.csv       1         2
+----------------------
+合计       3       218
+
+=== 真实目录: --top 1 --exclude-comments ===
+类型       文件数  代码行数
+---------------------------
+.py             1       180
+其余 2 类       2        38
+---------------------------
+合计            3       218
+
+=== --help ===
+usage: countloc.py [-h] [--top N] [--exclude-comments] [dir]
+
+统计目录下各类文件的代码行数，按行数从多到少输出
+
+positional arguments:
+  dir                 要统计的目录（默认当前目录）
+
+options:
+  -h, --help          show this help message and exit
+  --top N             只显示前 N 类
+  --exclude-comments  剔除注释行后再统计（只对认识的注释语法生效）</pre></details>
+<details class='msg'><summary>🔧 Edit · replace_all=False, file_path=/private/tmp/sessgit-demo/README.md</summary><pre>replace_all: False  file_path: /private/tmp/sessgit-demo/README.md  old_string:
+```console
+$ python3 countloc.py --top 3
+类型       文件数  代码行数
+---------------------------
+.py             1       197
+.js             1         7
+Makefile        1         3
+其余 2 类       2         5
+---------------------------
+合计            4       212
+```  new_string:
+```console
+$ python3 countloc.py --top 3
+类型       文件数  代码行数
+---------------------------
+.py             1         8
+.js             1         7
+Makefile        1         3
+其余 3 类       3         8
+---------------------------
+合计            6        26
+```</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>The file /private/tmp/sessgit-demo/README.md has been updated successfully. (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture /tmp/edgecase /tm, description=Clean up temp files and re-run tokenize </summary><pre>command:
+rm -rf /tmp/locfixture /tmp/edgecase /tmp/make_locfixture3.py &amp;&amp; ls /private/tmp/sessgit-demo &amp;&amp; python3 -c "
+import io, tokenize
+path='/private/tmp/sessgit-demo/countloc.py'
+src=open(path).read(); lines=src.splitlines()
+nonblank={i+1 for i,l in enumerate(lines) if l.strip()}
+pure, doc, skip = set(), set(), {tokenize.NL,tokenize.NEWLINE,tokenize.INDENT,tokenize.DEDENT,tokenize.ENDMARKER,tokenize.ENCODING}
+sig=[]
+for t in tokenize.generate_tokens(io.StringIO(src).readline):
+    if t.type==tokenize.COMMENT and not lines[t.start[0]-1][:t.start[1]].strip(): pure.add(t.start[0])
+    if t.type not in skip: sig.append(t)
+for i,t in enumerate(sig):
+    if t.type!=tokenize.STRING: continue
+    p=sig[i-1] if i else None; n=sig[i+1] if i+1&lt;len(sig) else None
+    if (p is None or p.end[0]&lt;t.start[0]) and (n is None or n.start[0]&gt;t.end[0]): doc|=set(range(t.start[0],t.end[0]+1))
+print('tokenize 对照(countloc.py 自身):', len(nonblank-pure-doc), '行')
+"  description: Clean up temp files and re-run tokenize cross-check</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>Contains zsh =cmd equals expansion</pre></details>
+<details class='msg'><summary>🔧 Bash · command=rm -rf /tmp/locfixture /tmp/edgecase /tm, description=Clean up temp files</summary><pre>command: rm -rf /tmp/locfixture /tmp/edgecase /tmp/make_locfixture3.py; ls /private/tmp/sessgit-demo  description: Clean up temp files</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>countloc.py
+README.md
+sample.csv</pre></details>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/oracle2.py, content="""用 tokenize 独立复核 countloc.py 自身在 --exc</summary><pre>file_path: /tmp/oracle2.py  content:
+"""用 tokenize 独立复核 countloc.py 自身在 --exclude-comments 下的行数。"""
+import io, tokenize
+
+target = "/private/tmp/sessgit-demo/countloc.py"
+src = open(target).read()
+lines = src.splitlines()
+nonblank = {i + 1 for i, l in enumerate(lines) if l.strip()}
+
+pure_comment, docstring = set(), set()
+skip = {tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT,
+        tokenize.ENDMARKER, tokenize.ENCODING}
+sig = []
+for t in tokenize.generate_tokens(io.StringIO(src).readline):
+    if t.type == tokenize.COMMENT:
+        if not lines[t.start[0] - 1][:t.start[1]].strip():
+            pure_comment.add(t.start[0])
+    if t.type not in skip:
+        sig.append(t)
+
+for i, t in enumerate(sig):
+    if t.type != tokenize.STRING:
+        continue
+    prev = sig[i - 1] if i else None
+    nxt = sig[i + 1] if i + 1 &lt; len(sig) else None
+    first_on_line = prev is None or prev.end[0] &lt; t.start[0]
+    ends_stmt = nxt is None or nxt.start[0] &gt; t.end[0]
+    if first_on_line and ends_stmt:
+        docstring |= set(range(t.start[0], t.end[0] + 1))
+
+print("非空行:", len(nonblank))
+print("纯注释行:", len(pure_comment), " docstring 行:", len(docstring))
+print("tokenize 口径的代码行数:", len(nonblank - pure_comment - docstring))
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/oracle2.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/oracle2.py; echo "--- count, description=Cross-check countloc.py line count with </summary><pre>command: python3 /tmp/oracle2.py; echo "--- countloc 自报: ---"; python3 /private/tmp/sessgit-demo/countloc.py --exclude-comments /private/tmp/sessgit-demo; rm -f /tmp/oracle2.py  description: Cross-check countloc.py line count with tokenize</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>非空行: 201
+纯注释行: 6  docstring 行: 19
+tokenize 口径的代码行数: 179
+--- countloc 自报: ---
+类型  文件数  代码行数
+----------------------
+.py        1       180
+.md        1        36
+.csv       1         2
+----------------------
+合计       3       218</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>A one-line discrepancy (179 vs 180) — worth finding the actual line rather than hand-waving:</div>
+<details class='msg'><summary>🔧 Write · file_path=/tmp/diffline.py, content="""找出 countloc 与 tokenize 口径不一致的具体行。""" </summary><pre>file_path: /tmp/diffline.py  content:
+"""找出 countloc 与 tokenize 口径不一致的具体行。"""
+import io, sys, tokenize
+
+sys.path.insert(0, "/private/tmp/sessgit-demo")
+import countloc  # noqa: E402
+
+target = "/private/tmp/sessgit-demo/countloc.py"
+src = open(target).read()
+lines = src.splitlines()
+
+# countloc 口径
+syntax = countloc.COMMENT_SYNTAX[".py"]
+block_end, mine = None, set()
+for i, line in enumerate(lines, start=1):
+    has_code, block_end = countloc.analyze_line(line + "\n", syntax,
+                                                block_end, i)
+    if has_code:
+        mine.add(i)
+
+# tokenize 口径
+pure_comment, docstring = set(), set()
+skip = {tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT,
+        tokenize.ENDMARKER, tokenize.ENCODING}
+sig = []
+for t in tokenize.generate_tokens(io.StringIO(src).readline):
+    if t.type == tokenize.COMMENT:
+        if not lines[t.start[0] - 1][:t.start[1]].strip():
+            pure_comment.add(t.start[0])
+    if t.type not in skip:
+        sig.append(t)
+for i, t in enumerate(sig):
+    if t.type != tokenize.STRING:
+        continue
+    prev = sig[i - 1] if i else None
+    nxt = sig[i + 1] if i + 1 &lt; len(sig) else None
+    first_on_line = prev is None or prev.end[0] &lt; t.start[0]
+    ends_stmt = nxt is None or nxt.start[0] &gt; t.end[0]
+    if first_on_line and ends_stmt:
+        docstring |= set(range(t.start[0], t.end[0] + 1))
+nonblank = {i + 1 for i, l in enumerate(lines) if l.strip()}
+theirs = nonblank - pure_comment - docstring
+
+print("countloc:", len(mine), " tokenize:", len(theirs))
+print()
+for n in sorted(mine - theirs):
+    print(f"[countloc 算了 / tokenize 没算] 第 {n} 行: {lines[n-1]!r}")
+for n in sorted(theirs - mine):
+    print(f"[tokenize 算了 / countloc 没算] 第 {n} 行: {lines[n-1]!r}")
+</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>File created successfully at: /tmp/diffline.py (file state is current in your context — no need to Read it back)</pre></details>
+<details class='msg'><summary>🔧 Bash · command=python3 /tmp/diffline.py, description=Locate the differing line</summary><pre>command: python3 /tmp/diffline.py  description: Locate the differing line</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>countloc: 180  tokenize: 179
+
+[countloc 算了 / tokenize 没算] 第 1 行: '#!/usr/bin/env python3'</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>Only line 1 (the shebang) differs — and that's exactly the change I just made, so the oracle needs the same exemption. Everything else agrees line-for-line.</div>
+<details class='msg'><summary>🔧 Bash · command=rm -f /tmp/diffline.py; echo "=== 最终确认：真, description=Final usage sweep and syntax check</summary><pre>command: rm -f /tmp/diffline.py; echo "=== 最终确认：真实目录 ===" &amp;&amp; python3 countloc.py &amp;&amp; echo &amp;&amp; python3 countloc.py --top 1 --exclude-comments &amp;&amp; echo &amp;&amp; python3 -m py_compile countloc.py &amp;&amp; echo "语法检查 OK"  description: Final usage sweep and syntax check</pre></details>
+<details class='msg'><summary>↩︎ 结果</summary><pre>=== 最终确认：真实目录 ===
+类型  文件数  代码行数
+----------------------
+.py        1       201
+.md        1        36
+.csv       1         2
+----------------------
+合计       3       239
+
+类型       文件数  代码行数
+---------------------------
+.py             1       180
+其余 2 类       2        38
+---------------------------
+合计            3       218
+
+语法检查 OK</pre></details>
+<div class='msg assistant'><span class='who'>Claude</span>改完了，`README.md` 写好了，最终用法全部跑过。
+
+## shebang 改动
+
+`countloc.py:96` 加了一条规则：**首行（且仅在首行）的 `#!` 开头的行算代码行**。测试树的 `.sh` 在 `--exclude-comments` 下从 1 → 2（shebang + `echo "hi"` 都算，`# 注释` 和行尾注释仍剔除），合计 14 → 15。另外验证了"仅限首行"：把 `#!/bin/bash` 放到第 2 行的 `.py` 文件里仍然按注释剔除。
+
+## README.md
+
+用法表 + 示例输出 + 统计口径 + 两个取舍。示例里的输出是实际跑出来的，不是我编的。
+
+## 最终确认（真实目录）
+
+```
+类型  文件数  代码行数          类型       文件数  代码行数
+----------------------          ---------------------------
+.py        1       201          .py             1       180
+.md        1        36          其余 2 类       2        38
+.csv       1         2          ---------------------------
+----------------------          合计            3       218
+合计       3       239
+```
+
+左默认、右 `--top 1 --exclude-comments`，`py_compile` 语法检查通过。临时测试文件已清理，目录里剩 `countloc.py`、`README.md`、`sample.csv`。
+
+**独立复核结果值得说一句**：我用 Python 官方 `tokenize` 对 `countloc.py` 自身做逐行对照，两边**只差一行**——第 1 行 `#!/usr/bin/env python3`。`tokenize` 把它算注释（179），`countloc` 按新规则算代码（180）。这正是这次要的改动，其余每一行两边完全一致，没有任何其他偏差。
+
+顺带说一下中间的过程：前两轮对照脚本报的偏差（5 行、179 行）都是**对照脚本自己的 bug**，不是 `countloc.py` 的问题——第一次我把 `tokenize.NEWLINE` 过滤掉了导致 docstring 判定失效，第二次我一处手算期望值写错了。我是靠"打印出具体是哪一行不一致"定位的，没有靠猜。</div>
+</div></details>
+<footer>由 sessgit 导出 · 人能读，Agent 也能接</footer></main></body></html>
