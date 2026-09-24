@@ -41,6 +41,19 @@ sessgit 的取舍正好相反：
 hub、分享链接、跨机器同步、merge agent、多 runtime 适配（暂只支持 Claude Code）。
 这些要么需要账号体系，要么等真需要再说。
 
+## 示例
+
+`examples/` 里是一次真实会话的完整产物（写一个统计代码行数的小脚本，三轮迭代）：
+
+| 文件 | 是什么 |
+|---|---|
+| `demo-session.jsonl` | 原始会话（817KB / 297 事件 / 3 轮） |
+| `demo-session.html` | `sessgit export` 的输出——单文件、零 JS、73KB |
+| `HANDOFF-demo.md` | `sessgit handoff` 的输出——给下一个 Agent 读 |
+| `countloc.py` / `README.md` | 那次会话里写出来的东西 |
+
+自己试：`sessgit init && sessgit import examples/demo-session.jsonl && sessgit export`
+
 ## 状态
 
 v0.1 · 单文件 · ~350 行 · 标准库 only。

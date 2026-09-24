@@ -209,6 +209,13 @@ def turn_title(u, n=60):
 
 # ---------------------------------------------------------------- 输出层
 
+def _fmt_arg(key, val):
+    """工具参数渲染成人能读的样子：多行字符串保留真换行，不再 json 转义。"""
+    if isinstance(val, str) and "\n" in val:
+        return f"{key}:\n{val[:6000]}"
+    return f"{key}: {str(val)[:600]}"
+
+
 def render_event(ev, sink):
     """把一个事件投递给 sink(kind, text, name, argsummary)。"""
     m = ev.get("message")
@@ -231,8 +238,9 @@ def render_event(ev, sink):
             sink("thinking", b.get("thinking", b.get("text", "")), None, None)
         elif k == "tool_use":
             args = b.get("input") or {}
-            brief = ", ".join(f"{kk}={str(vv)[:48]}" for kk, vv in list(args.items())[:2])
-            sink("tool", json.dumps(args, ensure_ascii=False)[:4000], b.get("name", "?"), brief[:110])
+            brief = ", ".join(
+                f"{kk}={str(vv).replace(chr(10), ' ⏎ ')[:40]}" for kk, vv in list(args.items())[:2])
+            sink("tool", "  ".join(_fmt_arg(kk, vv) for kk, vv in args.items()), b.get("name", "?"), brief[:110])
         elif k == "tool_result":
             rc = b.get("content")
             txt = rc if isinstance(rc, str) else "\n".join(
